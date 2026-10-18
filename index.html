@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="ESP32 接線規劃器：快速規劃模組接線並檢查腳位衝突。">
+  <title>ESP32 接線規劃器 | PinPilot</title>
+  <style>
+    :root {
+      --ink: #e8f4f0; --muted: #9db3ae; --panel: #102522; --panel-2: #14322d;
+      --line: rgba(211, 255, 239, .15); --mint: #53e5ba; --cyan: #68dff6;
+      --amber: #ffcf70; --danger: #ff8b8b; --bg: #071512; --shadow: 0 18px 50px rgba(0,0,0,.28);
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0; min-width: 320px; color: var(--ink); font: 16px/1.55 Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", "Microsoft JhengHei", sans-serif;
+      background: radial-gradient(circle at 15% -5%, #1a5246 0, transparent 34rem), radial-gradient(circle at 100% 0, #173c51 0, transparent 28rem), var(--bg);
+    }
+    body::before { content:""; pointer-events:none; position:fixed; inset:0; opacity:.32; background-image:linear-gradient(rgba(160,255,224,.045) 1px, transparent 1px),linear-gradient(90deg,rgba(160,255,224,.045) 1px, transparent 1px); background-size:32px 32px; mask-image:linear-gradient(to bottom,black,transparent 70%); }
+    button, select { font: inherit; }
+    button { cursor: pointer; }
+    .shell { max-width: 1240px; margin: auto; padding: 28px 22px 56px; }
+    header { display: flex; align-items: flex-start; justify-content: space-between; gap: 22px; padding: 8px 0 26px; position:relative; }
+    .eyebrow { color: var(--mint); font-size: .78rem; letter-spacing: .12em; font-weight: 800; text-transform: uppercase; }
+    h1 { margin: 3px 0 6px; font-size: clamp(2rem, 5vw, 3.8rem); letter-spacing: -.055em; line-height: 1; }
+    .subtitle { color: var(--muted); max-width: 660px; margin: 0; }
+    .top-actions { display:flex; gap:9px; align-items:center; flex-wrap:wrap; justify-content:flex-end; }.saved { display: inline-flex; align-items: center; gap: 8px; color: #c8efe3; background: rgba(83,229,186,.1); border: 1px solid rgba(83,229,186,.22); border-radius: 999px; padding: 8px 12px; white-space: nowrap; font-size: .85rem; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--mint); box-shadow: 0 0 15px var(--mint); }
+    .grid { display: grid; grid-template-columns: minmax(310px, .95fr) minmax(340px, 1.35fr); gap: 18px; }
+    .card { background: linear-gradient(145deg, rgba(21,50,45,.98), rgba(11,30,26,.96)); border: 1px solid var(--line); border-radius: 20px; box-shadow: var(--shadow); backdrop-filter: blur(12px); }
+    .picker, .right { padding: 22px; }
+    .section-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+    h2, h3 { margin: 0; line-height: 1.2; }
+    h2 { font-size: 1.15rem; } h3 { font-size: .98rem; }
+    .count { color: var(--mint); font-size: .85rem; background: rgba(83,229,186,.1); padding: 3px 9px; border-radius: 99px; }
+    .component-list { display: grid; gap: 9px; }
+    .component {
+      display: grid; grid-template-columns: 24px 1fr auto; align-items: center; gap: 10px; padding: 11px 10px; border: 1px solid transparent; border-radius: 13px; transition: .18s ease;
+    }
+    .component:hover { background: rgba(255,255,255,.05); border-color: var(--line); transform:translateX(3px); }
+    .component:has(input:checked) { background: linear-gradient(90deg, rgba(83,229,186,.15), rgba(83,229,186,.035)); border-color: rgba(83,229,186,.35); box-shadow:inset 3px 0 var(--mint); }
+    .component input { width: 18px; height: 18px; accent-color: var(--mint); }
+    .component strong { display: block; font-size: .94rem; } .component small { color: var(--muted); font-size: .76rem; }
+    .icon { font-size: 1.22rem; }
+    .preset-label { margin:16px 0 8px; color:var(--muted); font-size:.73rem; font-weight:800; letter-spacing:.08em; text-transform:uppercase; }.preset-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:7px; }.preset { padding:9px 6px; min-height:62px; text-align:left; color:var(--ink); border:1px solid var(--line); border-radius:11px; background:rgba(255,255,255,.035); transition:.18s; }.preset:hover { border-color:var(--cyan); background:rgba(104,223,246,.12); transform:translateY(-2px); }.preset b { display:block; font-size:.76rem; }.preset small { color:var(--muted); font-size:.66rem; }.hint { color: var(--muted); border-top: 1px solid var(--line); margin-top: 16px; padding-top: 14px; font-size: .83rem; }
+    .journey { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:0 0 18px; }.journey-step { position:relative; padding:9px 10px 9px 34px; border:1px solid var(--line); border-radius:11px; color:var(--muted); font-size:.72rem; }.journey-step b { display:block; color:var(--ink); font-size:.82rem; }.journey-step i { position:absolute; left:10px; top:11px; width:15px; height:15px; border-radius:50%; display:grid; place-items:center; font-style:normal; font-size:.62rem; color:#062018; background:var(--mint); }.journey-step.active { border-color:rgba(83,229,186,.45); background:rgba(83,229,186,.07); }
+    .overview { display: grid; grid-template-columns: 1.1fr .9fr; gap: 18px; }
+    .board { position: relative; min-height: 300px; padding: 23px 58px; overflow: hidden; background: radial-gradient(circle at 50% 50%, #1d5a4b, #0d2923 69%); border: 1px solid rgba(83,229,186,.22); border-radius: 18px; }
+    .board::before { content: "ESP32"; position: absolute; inset: 50% auto auto 50%; transform: translate(-50%,-50%) rotate(-90deg); color: rgba(232,244,240,.07); font-size: 4.6rem; font-weight: 900; letter-spacing: .1em; }
+    .chip { position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%); width: 128px; height: 166px; border: 1px solid rgba(104,223,246,.48); border-radius: 12px; background: repeating-linear-gradient(90deg, #173c35 0 7px, #205b4d 7px 8px); box-shadow: 0 0 0 8px rgba(104,223,246,.04), 0 0 34px rgba(83,229,186,.13); display: grid; place-items: center; text-align: center; font-weight: 800; letter-spacing: .08em; z-index: 1; }
+    .chip span { font-size: .7rem; color: var(--mint); letter-spacing: .12em; }
+    .pin-column { position: relative; z-index: 2; display: grid; gap: 4px; }
+    .left-pins { float: left; } .right-pins { float: right; }
+    .pin { display: flex; align-items: center; justify-content: center; width: 44px; min-height: 20px; padding: 2px; border: 1px solid rgba(232,244,240,.2); border-radius: 5px; color: #d5e8e3; background: #0a211c; font-size: .65rem; font-weight: 700; transition: .18s; cursor:pointer; }
+    .pin:hover,.pin.selected { transform:scale(1.11); border-color:var(--cyan); box-shadow:0 0 0 3px rgba(104,223,246,.14); z-index:3; }.pin:focus-visible { outline:2px solid var(--cyan); outline-offset:2px; }
+    .pin.used { color: #052018; border-color: var(--mint); background: var(--mint); box-shadow: 0 0 14px rgba(83,229,186,.52); }
+    .pin.conflict { color: #330a0a; border-color: var(--danger); background: var(--danger); box-shadow: 0 0 14px rgba(255,139,139,.5); }
+    .pin.input-only { color: #f0d3a1; border-color: rgba(255,207,112,.55); }
+    .legend { display: flex; flex-wrap: wrap; gap: 12px; color: var(--muted); margin-top: 12px; font-size: .76rem; }
+    .pin-inspector { min-height:58px; margin-top:11px; padding:10px 12px; border:1px solid rgba(104,223,246,.2); border-radius:11px; background:rgba(104,223,246,.055); color:var(--muted); font-size:.78rem; }.pin-inspector b { color:var(--cyan); }.pin-inspector .tags { display:inline-flex; gap:5px; flex-wrap:wrap; margin-left:4px; }.tag { padding:1px 6px; border-radius:99px; color:#092922; background:var(--mint); font-weight:800; font-size:.67rem; }
+    .legend i { display: inline-block; width: 9px; height: 9px; margin-right: 4px; border-radius: 50%; background: #0a211c; border: 1px solid var(--line); }.legend .l-used { background: var(--mint); }.legend .l-conflict { background: var(--danger); }.legend .l-input { background: var(--amber); }
+    .score { display: grid; place-items: center; align-content: center; min-height: 300px; border: 1px solid var(--line); border-radius: 18px; background: rgba(0,0,0,.09); text-align: center; }
+    .ring { --p: 0; width: 154px; height: 154px; display: grid; place-items: center; border-radius: 50%; background: conic-gradient(var(--mint) calc(var(--p) * 1%), rgba(255,255,255,.1) 0); position: relative; }
+    .ring::before { content: ""; position: absolute; inset: 10px; border-radius: inherit; background: #112a25; }.ring > div { position: relative; z-index: 1; }.ring b { display: block; font-size: 2.05rem; line-height: 1; }.ring small { color: var(--muted); font-size: .72rem; }
+    .score p { max-width: 210px; color: var(--muted); font-size: .86rem; margin: 14px 12px 0; }
+    .wiring { margin-top: 18px; }
+    .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 14px; }
+    table { width: 100%; border-collapse: collapse; font-size: .86rem; min-width: 510px; }
+    th { color: #bbd7d0; text-align: left; font-size: .73rem; letter-spacing: .05em; text-transform: uppercase; background: rgba(255,255,255,.045); }
+    th, td { padding: 10px 12px; border-bottom: 1px solid var(--line); } tr:last-child td { border-bottom: 0; } td code { color: var(--cyan); }
+    .empty { color: var(--muted); text-align: center; padding: 26px; }
+    .controls { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 18px; }
+    .btn { border: 1px solid var(--line); padding: 10px 14px; border-radius: 10px; color: var(--ink); background: rgba(255,255,255,.05); font-weight: 750; font-size: .85rem; transition: .16s; }.btn:hover { transform: translateY(-2px); border-color: rgba(83,229,186,.58); background: rgba(83,229,186,.13); box-shadow:0 8px 18px rgba(0,0,0,.17); }.btn.primary { background: var(--mint); color: #06221a; border-color: var(--mint); }.btn.danger { color: #ffc1c1; }.btn.ghost { padding:8px 11px; font-size:.78rem; }
+    .issues { margin-top: 18px; padding: 15px 16px; border-radius: 14px; background: rgba(255,207,112,.09); border: 1px solid rgba(255,207,112,.23); }.issues.ok { background: rgba(83,229,186,.08); border-color: rgba(83,229,186,.25); }.issues h3 { font-size: .9rem; }.issues ul { margin: 7px 0 0; padding-left: 20px; color: #d8e7e2; font-size: .84rem; }
+    .spec { margin-top: 18px; padding: 24px; }.spec-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 18px; }.spec-grid div { padding: 13px; background: rgba(0,0,0,.11); border: 1px solid var(--line); border-radius: 12px; }.spec-grid b { color: var(--mint); display: block; font-size: .82rem; }.spec-grid span { color: var(--muted); font-size: .84rem; }
+    details { margin-top: 20px; border-top: 1px solid var(--line); padding-top: 14px; } summary { cursor: pointer; color: var(--cyan); font-weight: 700; } details p, details li { color: var(--muted); font-size: .9rem; } details ol { padding-left: 20px; }
+    .toast { position: fixed; bottom: 22px; left: 50%; transform: translate(-50%,130%); padding: 11px 16px; color: #052018; background: var(--mint); border-radius: 999px; font-size: .88rem; font-weight: 800; box-shadow: var(--shadow); transition: transform .24s; z-index: 5; }.toast.show { transform: translate(-50%,0); }
+    body.focus-mode .picker, body.focus-mode .spec { display:none; } body.focus-mode .grid { grid-template-columns:1fr; } body.focus-mode .right { max-width:980px; margin:auto; }.focus-mode .overview { grid-template-columns:1.2fr .8fr; }
+    @media (max-width: 900px) { .grid, .overview { grid-template-columns: 1fr; }.score { min-height: 210px; }.board { min-height: 270px; }.spec-grid { grid-template-columns: 1fr; } }
+    @media (max-width: 590px) { .shell { padding: 20px 13px 44px; } header { display: block; }.saved { margin-top: 16px; }.picker,.right,.spec { padding: 16px; }.board { padding: 18px 42px; }.chip { width: 108px; height: 145px; } }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header>
+      <div>
+        <div class="eyebrow">PinPilot / ESP32 lab</div>
+        <h1>ESP32 接線規劃器</h1>
+        <p class="subtitle">勾選你想接的模組，PinPilot 會產生接線表、標示使用中的 GPIO，並即時找出常見衝突。</p>
+      </div>
+      <div class="top-actions"><button class="btn ghost" id="focusBtn" aria-pressed="false">專注接線</button><div class="saved"><span class="dot"></span><span id="saveStatus">設定會儲存在此瀏覽器</span></div></div>
+    </header>
+
+    <section class="grid" aria-label="接線規劃工具">
+      <aside class="card picker">
+        <div class="section-head"><h2>1. 選擇模組</h2><span class="count" id="selectedCount">0 個已選</span></div>
+        <div class="component-list" id="componentList"></div>
+        <div class="preset-label">一鍵開啟範本</div>
+        <div class="preset-grid" aria-label="接線範本">
+          <button class="preset" data-preset="weather"><b>氣象站</b><small>BME280 + OLED</small></button>
+          <button class="preset" data-preset="desk"><b>互動桌面</b><small>OLED + 旋鈕 + LED</small></button>
+          <button class="preset" data-preset="rover"><b>迷你車</b><small>馬達 + 伺服 + 按鈕</small></button>
+        </div>
+        <p class="hint">預設腳位採常見 ESP32 DevKit V1 用法；可在右側接線表用下拉選單調整單線 GPIO。</p>
+      </aside>
+
+      <section class="card right">
+        <div class="journey" aria-label="接線工作流程"><div class="journey-step active"><i>1</i><b>挑選</b>選擇模組</div><div class="journey-step active"><i>2</i><b>檢查</b>排除腳位衝突</div><div class="journey-step"><i>3</i><b>實作</b>依接線表連接</div></div>
+        <div class="overview">
+          <div>
+            <div class="section-head"><h2>2. GPIO 佔用圖</h2><span class="count" id="pinCount">0 / 24 GPIO</span></div>
+            <div class="board" aria-label="ESP32 GPIO 使用狀態圖">
+              <div class="pin-column left-pins" id="leftPins"></div>
+              <div class="pin-column right-pins" id="rightPins"></div>
+              <div class="chip">ESP32<span>DEVKIT V1</span></div>
+            </div>
+            <div class="legend"><span><i></i>未使用</span><span><i class="l-used"></i>已使用</span><span><i class="l-conflict"></i>衝突</span><span><i class="l-input"></i>僅輸入</span></div>
+            <div class="pin-inspector" id="pinInspector">點選任一 GPIO，查看這個腳位的使用狀態與接線用途。</div>
+          </div>
+          <div class="score">
+            <div class="ring" id="ring"><div><b id="score">100</b><small>配置分數</small></div></div>
+            <p id="scoreText">開始選擇模組，建立你的接線方案。</p>
+          </div>
+        </div>
+
+        <section class="wiring">
+          <div class="section-head"><h2>3. 自動產生接線表</h2><span class="count">可直接照表接線</span></div>
+          <div class="table-wrap"><table><thead><tr><th>模組</th><th>訊號</th><th>ESP32 GPIO</th><th>說明</th></tr></thead><tbody id="wiringBody"></tbody></table></div>
+        </section>
+
+        <section class="issues" id="issuesBox"><h3 id="issuesTitle">準備開始</h3><ul id="issuesList"><li>選擇模組後，這裡會顯示接線提醒。</li></ul></section>
+        <div class="controls"><button class="btn primary" id="saveBtn">儲存方案</button><button class="btn" id="exportBtn">匯出 JSON</button><button class="btn danger" id="resetBtn">清除重來</button></div>
+      </section>
+    </section>
+
+    <section class="card spec">
+      <h2>作品規格書（本頁實作對應）</h2>
+      <div class="spec-grid">
+        <div><b>目標使用者</b><span>第一次整合感測器、顯示器與輸出模組的 ESP32 初學者。</span></div>
+        <div><b>核心問題</b><span>接線時容易忘記 GPIO 已被占用，或誤把僅輸入腳拿來控制輸出。</span></div>
+        <div><b>互動功能</b><span>勾選模組、調整腳位、衝突檢查、圖像化佔用、瀏覽器儲存與 JSON 匯出。</span></div>
+      </div>
+      <details>
+        <summary>查看完整規格與 AI 協作紀錄</summary>
+        <p><b>發想：</b>我想做一個不是只有展示資訊、而是真的能在做 ESP32 小專題前使用的網頁工具。因此把「模組選擇、腳位規劃與基本錯誤預防」整合在同一個畫面。</p>
+        <ol>
+          <li>使用者可選擇 BME280、OLED、旋鈕、按鈕、伺服馬達、NeoPixel 與馬達驅動器。</li>
+          <li>系統依模組預設接線建立表格；I2C 裝置可共用 SDA/SCL，其他重複輸出／輸入會標示衝突。</li>
+          <li>將 ESP32 常見的 GPIO 34、35、36、39 標為僅輸入；若配置為輸出功能會扣分並提醒。</li>
+          <li>使用者可以儲存目前方案在瀏覽器，或匯出 JSON 作為下一步接線／寫程式的參考。</li>
+        </ol>
+        <p><b>技術限制：</b>本作品是單一 <code>index.html</code>，所有 CSS 與 JavaScript 皆內嵌；不需伺服器或外部套件，可直接部署至 GitHub Pages。它提供規劃建議，實際接線前仍須依模組資料表確認電壓、啟動腳與電流需求。</p>
+      </details>
+    </section>
+  </main>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    const pins = [23,22,1,3,21,19,18,5,17,16,4,0,2,15,13,12,14,27,26,25,33,32,35,34,39,36];
+    const inputOnly = new Set([34,35,36,39]);
+    const outputCapable = pins.filter(p => !inputOnly.has(p));
+    const modules = [
+      { id:'bme', icon:'🌡️', name:'BME280 環境感測器', sub:'I2C · 溫度／濕度／氣壓', wires:[['SDA',21,'I2C 資料'],['SCL',22,'I2C 時脈'],['3V3','3V3','供電'],['GND','GND','共地']] },
+      { id:'oled', icon:'🖥️', name:'OLED 顯示器', sub:'I2C · 128 × 64', wires:[['SDA',21,'與 I2C 模組共用'],['SCL',22,'與 I2C 模組共用'],['VCC','3V3','3.3V 供電'],['GND','GND','共地']] },
+      { id:'pot', icon:'🎛️', name:'旋鈕電位器', sub:'ADC · 類比輸入', wires:[['SIG',34,'ADC1；僅輸入腳'],['VCC','3V3','3.3V 供電'],['GND','GND','共地']] },
+      { id:'button', icon:'🔘', name:'按鈕', sub:'Digital input · 內建上拉', wires:[['SIG',27,'設定 INPUT_PULLUP'],['GND','GND','按下時接地']] },
+      { id:'servo', icon:'⚙️', name:'伺服馬達', sub:'PWM · 外接 5V 供電', wires:[['PWM',18,'LEDC PWM'],['V+','5V','外接 5V；勿由 3V3 供電'],['GND','GND','必須與 ESP32 共地']] },
+      { id:'neopixel', icon:'✨', name:'NeoPixel LED', sub:'Digital output · 建議 level shifter', wires:[['DIN',5,'800 kHz 數位資料'],['V+','5V','依 LED 數量外接電源'],['GND','GND','共地']] },
+      { id:'motor', icon:'🚗', name:'L298N 馬達驅動器', sub:'2 個 Digital output', wires:[['IN1',25,'馬達方向 1'],['IN2',26,'馬達方向 2'],['GND','GND','與馬達電源共地']] }
+    ];
+    let state = { selected: [], assignments: {} };
+    let inspectedPin = null;
+    const presets = {
+      weather: ['bme','oled'],
+      desk: ['oled','pot','neopixel'],
+      rover: ['motor','servo','button']
+    };
+    const $ = id => document.getElementById(id);
+    const toast = text => { const t=$('toast'); t.textContent=text; t.classList.add('show'); clearTimeout(toast.timer); toast.timer=setTimeout(()=>t.classList.remove('show'),2100); };
+    function load() { try { const saved=JSON.parse(localStorage.getItem('pinpilot-esp32')); if (saved && Array.isArray(saved.selected)) state=saved; } catch (_) {} }
+    function assigned(m, wire) { return state.assignments[`${m.id}:${wire[0]}`] ?? wire[1]; }
+    function drawList() {
+      $('componentList').innerHTML = modules.map(m => `<label class="component"><input type="checkbox" data-id="${m.id}" ${state.selected.includes(m.id)?'checked':''}><span><strong>${m.name}</strong><small>${m.sub}</small></span><span class="icon">${m.icon}</span></label>`).join('');
+      document.querySelectorAll('[data-id]').forEach(el => el.addEventListener('change', e => { const id=e.target.dataset.id; state.selected=e.target.checked ? [...state.selected,id] : state.selected.filter(x=>x!==id); render(); }));
+    }
+    function activeWires() { return modules.filter(m=>state.selected.includes(m.id)).flatMap(m=>m.wires.map(w=>({m,w,pin:assigned(m,w)}))); }
+    function conflicts(wires) {
+      const usage={}; wires.filter(x=>typeof x.pin==='number').forEach(x=>(usage[x.pin]??=[]).push(x));
+      const problems=[]; Object.entries(usage).forEach(([pin, rows])=>{
+        const i2cShared=rows.length===2 && rows.every(r=>['SDA','SCL'].includes(r.w[0]));
+        if(rows.length>1 && !i2cShared) problems.push(`GPIO ${pin} 被 ${rows.map(r=>r.m.name+' '+r.w[0]).join('、')} 同時使用。`);
+        if(inputOnly.has(+pin) && rows.some(r=>['PWM','DIN','IN1','IN2'].includes(r.w[0]))) problems.push(`GPIO ${pin} 僅能輸入，不能作為 ${rows.map(r=>r.w[0]).join('/')} 輸出。`);
+      });
+      if(state.selected.includes('servo') && state.selected.includes('neopixel')) problems.push('伺服馬達與 NeoPixel 都可能造成 5V 電源瞬間電流上升，請使用足夠的外接電源並共地。');
+      if(state.selected.includes('motor')) problems.push('L298N 與馬達電源不可由 ESP32 供應；請確認外接電源、共地與反電動勢保護。');
+      return {usage,problems};
+    }
+    function pinSelect(m,w,pin) {
+      if(typeof pin !== 'number') return `<code>${pin}</code>`;
+      const choices=(w[0]==='SIG' ? pins : outputCapable).map(p=>`<option value="${p}" ${p===pin?'selected':''}>GPIO ${p}${inputOnly.has(p)?'（僅輸入）':''}</option>`).join('');
+      return `<select aria-label="${m.name} ${w[0]} GPIO" data-wire="${m.id}:${w[0]}">${choices}</select>`;
+    }
+    function drawWiring(wires) {
+      const body=$('wiringBody');
+      if(!wires.length) { body.innerHTML='<tr><td colspan="4" class="empty">從左側勾選一個模組開始規劃。</td></tr>'; return; }
+      body.innerHTML=wires.map(({m,w,pin})=>`<tr><td>${m.icon} ${m.name}</td><td><code>${w[0]}</code></td><td>${pinSelect(m,w,pin)}</td><td>${w[2]}</td></tr>`).join('');
+      document.querySelectorAll('[data-wire]').forEach(s=>s.addEventListener('change',e=>{state.assignments[e.target.dataset.wire]=+e.target.value; render();}));
+    }
+    function drawPins(usage) {
+      const build=p=>`<button class="pin ${usage[p]?.length>1?'conflict':usage[p]?'used':''} ${inputOnly.has(p)?'input-only':''} ${inspectedPin===p?'selected':''}" data-pin="${p}" title="GPIO ${p}${inputOnly.has(p)?'：僅輸入':''}" aria-label="查看 GPIO ${p}">${p}</button>`;
+      $('leftPins').innerHTML=pins.slice(0,13).map(build).join(''); $('rightPins').innerHTML=pins.slice(13).map(build).join('');
+      const used=Object.keys(usage).length; $('pinCount').textContent=`${used} / 24 GPIO`; $('selectedCount').textContent=`${state.selected.length} 個已選`;
+      document.querySelectorAll('[data-pin]').forEach(button => button.addEventListener('click', () => { inspectedPin=+button.dataset.pin; drawPins(usage); }));
+      drawInspector(usage);
+    }
+    function drawInspector(usage) {
+      const box=$('pinInspector');
+      if(inspectedPin===null) { box.innerHTML='點選任一 GPIO，查看這個腳位的使用狀態與接線用途。'; return; }
+      const rows=usage[inspectedPin] ?? [];
+      const inputHint=inputOnly.has(inspectedPin)?' · 僅可作輸入':' · 可作輸入或輸出';
+      if(!rows.length) { box.innerHTML=`<b>GPIO ${inspectedPin}</b>${inputHint}<br>目前沒有分配給任何模組。`; return; }
+      box.innerHTML=`<b>GPIO ${inspectedPin}</b>${inputHint}<br>目前用途：<span class="tags">${rows.map(r=>`<span class="tag">${r.m.icon} ${r.w[0]}</span>`).join('')}</span>`;
+    }
+    function drawIssues(problems) {
+      const box=$('issuesBox'), title=$('issuesTitle'), list=$('issuesList');
+      if(!state.selected.length) { box.classList.remove('ok'); title.textContent='準備開始'; list.innerHTML='<li>選擇模組後，這裡會顯示接線提醒。</li>'; return; }
+      if(problems.length) { box.classList.remove('ok'); title.textContent=`發現 ${problems.length} 個需要注意的地方`; list.innerHTML=problems.map(x=>`<li>${x}</li>`).join(''); }
+      else { box.classList.add('ok'); title.textContent='配置看起來沒問題'; list.innerHTML='<li>沒有偵測到 GPIO 重複使用或僅輸入腳誤用。仍請在上電前確認每個模組的電壓與電流規格。</li>'; }
+    }
+    function drawScore(problems, usage) {
+      let score=Math.max(0,100-problems.length*18-Math.max(0,Object.keys(usage).length-12)*2); if(!state.selected.length) score=100;
+      $('score').textContent=score; $('ring').style.setProperty('--p',score); $('ring').style.background=`conic-gradient(${problems.length?'var(--amber)':'var(--mint)'} ${score}%, rgba(255,255,255,.1) 0)`;
+      $('scoreText').textContent=!state.selected.length?'開始選擇模組，建立你的接線方案。':problems.length?'先處理提醒項目，讓你的接線更安全。':`已使用 ${Object.keys(usage).length} 個 GPIO，方案可以開始實作。`;
+    }
+    function drawJourney(problems) { const steps=document.querySelectorAll('.journey-step'); if(steps[2]) steps[2].classList.toggle('active', state.selected.length>0 && problems.length===0); }
+    function render() { drawList(); const wires=activeWires(); const {usage,problems}=conflicts(wires); drawWiring(wires); drawPins(usage); drawIssues(problems); drawScore(problems,usage); drawJourney(problems); }
+    document.querySelectorAll('[data-preset]').forEach(button => button.addEventListener('click', () => { state={selected:[...presets[button.dataset.preset]],assignments:{}}; inspectedPin=null; $('saveStatus').textContent='已套用範本，記得儲存'; render(); toast(`已套用「${button.querySelector('b').textContent}」範本`); }));
+    $('focusBtn').addEventListener('click',()=>{const enabled=document.body.classList.toggle('focus-mode'); $('focusBtn').textContent=enabled?'顯示完整工作台':'專注接線'; $('focusBtn').setAttribute('aria-pressed',enabled); toast(enabled?'已進入專注接線模式':'已回到完整工作台');});
+    $('saveBtn').addEventListener('click',()=>{localStorage.setItem('pinpilot-esp32',JSON.stringify(state)); $('saveStatus').textContent='方案已儲存'; toast('已儲存到這台裝置');});
+    $('exportBtn').addEventListener('click',()=>{const wires=activeWires().map(x=>({module:x.m.name,signal:x.w[0],esp32_pin:typeof x.pin==='number'?`GPIO ${x.pin}`:x.pin,note:x.w[2]})); const blob=new Blob([JSON.stringify({app:'PinPilot ESP32',exported_at:new Date().toISOString(),wiring:wires},null,2)],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='esp32-wiring-plan.json'; a.click(); URL.revokeObjectURL(a.href); toast('已下載 JSON 接線方案');});
+    $('resetBtn').addEventListener('click',()=>{state={selected:[],assignments:{}}; inspectedPin=null; localStorage.removeItem('pinpilot-esp32'); $('saveStatus').textContent='設定會儲存在此瀏覽器'; render(); toast('已清除目前方案');});
+    load(); render();
+  </script>
+</body>
+</html>
